@@ -59,10 +59,10 @@
     body:before{
       content:"";
       position:fixed;
-      left:0;
-      right:0;
-      top:0;
-      bottom:0;
+      left:-24px;
+      right:-24px;
+      top:-24px;
+      bottom:-180px;
       background:var(--soft);
       z-index:0;
       pointer-events:none;
@@ -351,7 +351,7 @@
       font-size:22px;
       line-height:1;
       letter-spacing:.04em;
-      transform:translateY(-3px);
+      transform:translateY(3px);
     }
 
     .status{
@@ -393,7 +393,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:4px;
+      bottom:0;
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -454,7 +454,7 @@
       font-size:38px;
       font-weight:500;
       line-height:1;
-      transform:translateY(-2px);
+      transform:translateY(2px);
     }
 
     @media (min-width:560px){
@@ -609,12 +609,25 @@
     }
 
     .toast.success{
-      left:18px;
-      bottom:calc(var(--nav-h) + 24px);
+      left:auto;
+      right:135px;
+      bottom:auto;
+      top:calc(176px + env(safe-area-inset-top));
       transform:translateY(10px);
       background:#16a34a;
       border-color:rgba(255,255,255,.18);
       box-shadow:0 14px 35px rgba(22,163,74,.28);
+    }
+
+    .toast.pending{
+      left:auto;
+      right:135px;
+      bottom:auto;
+      top:calc(176px + env(safe-area-inset-top));
+      transform:translateY(10px);
+      background:#d97706;
+      border-color:rgba(255,255,255,.18);
+      box-shadow:0 14px 35px rgba(217,119,6,.24);
     }
 
     .toast.show{
@@ -623,6 +636,10 @@
     }
 
     .toast.success.show{
+      transform:translateY(0);
+    }
+
+    .toast.pending.show{
       transform:translateY(0);
     }
 
@@ -819,6 +836,40 @@
     "AAVE":"AAVE",
     "PEPE":"PEPE",
     "SHIB":"SHIBA INU"
+  };
+
+  var ASSET_NAMES = {
+    "VOO":"Vanguard S&P 500 ETF",
+    "SPY":"SPDR S&P 500 ETF Trust",
+    "IVV":"iShares Core S&P 500 ETF",
+    "QQQ":"Invesco QQQ Trust",
+    "VTI":"Vanguard Total Stock Market ETF",
+    "VT":"Vanguard Total World Stock ETF",
+    "VEA":"Vanguard FTSE Developed Markets ETF",
+    "VWO":"Vanguard FTSE Emerging Markets ETF",
+    "SCHD":"Schwab U.S. Dividend Equity ETF",
+    "DIA":"SPDR Dow Jones Industrial Average ETF Trust",
+    "IWM":"iShares Russell 2000 ETF",
+    "AAPL":"Apple Inc.",
+    "MSFT":"Microsoft Corporation",
+    "GOOGL":"Alphabet Inc.",
+    "GOOG":"Alphabet Inc.",
+    "AMZN":"Amazon.com, Inc.",
+    "NVDA":"NVIDIA Corporation",
+    "META":"Meta Platforms, Inc.",
+    "TSLA":"Tesla, Inc.",
+    "BRK.B":"Berkshire Hathaway Inc.",
+    "JPM":"JPMorgan Chase & Co.",
+    "V":"Visa Inc.",
+    "MA":"Mastercard Incorporated",
+    "UNH":"UnitedHealth Group Incorporated",
+    "JNJ":"Johnson & Johnson",
+    "PG":"Procter & Gamble Co.",
+    "KO":"Coca-Cola Company",
+    "PEP":"PepsiCo, Inc.",
+    "DIS":"The Walt Disney Company",
+    "NFLX":"Netflix, Inc.",
+    "AMD":"Advanced Micro Devices, Inc."
   };
 
   var state = loadState();
@@ -1032,21 +1083,21 @@
     var form = byId("addForm");
     if(currentScreen === "history"){
       byId("addTitle").textContent = "Agregar inversión";
-      byId("addHint").textContent = "Ingresá la fecha y el importe.";
+      byId("addHint").textContent = "Ingresá la fecha y el importe";
       form.innerHTML = ''
         + '<label for="dateInput">Fecha</label>'
         + '<input id="dateInput" name="date" type="date" value="' + todayISO() + '" required>'
         + '<label for="amountInput">Importe</label>'
-        + '<input id="amountInput" name="amount" inputmode="decimal" autocomplete="off" placeholder="Ej: 100 o 100,50" required>'
+        + '<input id="amountInput" name="amount" inputmode="decimal" autocomplete="off" placeholder="USD" required>'
         + '<button class="primary-action" type="submit">Guardar inversión</button>';
     }else{
       byId("addTitle").textContent = "Agregar activo";
-      byId("addHint").textContent = "Ejemplos: BTC, ETH, SOL, VOO, SPY, AAPL.";
+      byId("addHint").textContent = "";
       form.innerHTML = ''
         + '<label for="assetInput">Activo</label>'
-        + '<input id="assetInput" name="asset" autocapitalize="characters" autocomplete="off" placeholder="Ej: VOO o BTC" required>'
+        + '<input id="assetInput" name="asset" autocapitalize="characters" autocomplete="off" required>'
         + '<label for="quantityInput">Cantidad</label>'
-        + '<input id="quantityInput" name="quantity" inputmode="decimal" autocomplete="off" placeholder="Ej: 0,25 o 3" required>'
+        + '<input id="quantityInput" name="quantity" inputmode="decimal" autocomplete="off" required>'
         + '<button class="primary-action" type="submit">Guardar activo</button>';
     }
 
@@ -1178,6 +1229,7 @@
   function assetLongName(asset){
     var key = assetKey(asset).replace("-USD","").replace("/USD","").replace("USD","");
     if(CRYPTO_NAMES[key]) return CRYPTO_NAMES[key];
+    if(ASSET_NAMES[key]) return ASSET_NAMES[key];
     return "";
   }
 
@@ -1186,6 +1238,8 @@
       if(manual) toast("Actualizado", "success", 1000);
       return;
     }
+
+    if(manual) toast("Actualizando", "pending", 20000);
 
     var prices = {};
     var cryptoItems = [];
