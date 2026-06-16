@@ -22,8 +22,8 @@
       --line:#e2e8f0;
       --text:#0f172a;
       --muted:#64748b;
-      --primary:#2563eb;
-      --primary2:#1d4ed8;
+      --primary:#111827;
+      --primary2:#0f172a;
       --danger:#dc2626;
       --ok:#16a34a;
       --warn:#d97706;
@@ -33,17 +33,36 @@
     }
 
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html{height:100%;background:var(--soft)}
+    html{
+      height:100%;
+      min-height:100%;
+      background:var(--soft);
+      overflow:hidden;
+    }
+
     body{
       margin:0;
+      height:100%;
       min-height:100%;
       min-height:100dvh;
       background:var(--soft);
       color:var(--text);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-      overflow-x:hidden;
+      overflow:hidden;
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
+    }
+
+    body:after{
+      content:"";
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      height:calc(120px + env(safe-area-inset-bottom));
+      background:var(--soft);
+      z-index:1;
+      pointer-events:none;
     }
 
     button,input{font:inherit}
@@ -53,12 +72,15 @@
       width:100%;
       max-width:540px;
       margin:0 auto;
-      min-height:100vh;
-      min-height:100dvh;
+      height:100vh;
+      height:100dvh;
       background:var(--soft);
       position:relative;
       overflow-x:hidden;
-      padding-bottom:calc(var(--nav-h) + 24px);
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:calc(var(--nav-h) + 28px + env(safe-area-inset-bottom));
+      z-index:2;
     }
 
     .hero{
@@ -217,6 +239,13 @@
       line-height:1.45;
     }
 
+    .empty.nowrap{
+      white-space:nowrap;
+      font-size:13px;
+      padding-left:10px;
+      padding-right:10px;
+    }
+
     .empty strong{
       color:var(--primary);
     }
@@ -287,6 +316,9 @@
       font-size:19px;
       font-weight:900;
       cursor:pointer;
+      display:grid;
+      place-items:center;
+      line-height:1;
     }
 
     .menu-btn{
@@ -301,6 +333,9 @@
       letter-spacing:.04em;
       line-height:1;
       cursor:pointer;
+      display:grid;
+      place-items:center;
+      padding:0;
     }
 
     .status{
@@ -313,6 +348,10 @@
       font-size:12px;
       line-height:1.35;
     }
+
+    .status:empty{display:none}
+
+    #priceStatusWrap{display:none}
 
     .pill{
       display:inline-flex;
@@ -338,7 +377,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:8px;
+      bottom:calc(8px + env(safe-area-inset-bottom));
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -362,6 +401,10 @@
       font-weight:850;
       font-size:13px;
       cursor:pointer;
+      display:grid;
+      place-items:center;
+      line-height:1;
+      padding:0;
     }
 
     .nav button.active{
@@ -372,7 +415,7 @@
     .fab{
       position:fixed;
       right:18px;
-      bottom:calc(var(--nav-h) + 22px);
+      bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));
       width:60px;
       height:60px;
       border:0;
@@ -384,6 +427,9 @@
       box-shadow:0 16px 34px rgba(37,99,235,.42);
       cursor:pointer;
       z-index:60;
+      display:grid;
+      place-items:center;
+      padding:0;
     }
 
     @media (min-width:560px){
@@ -627,9 +673,9 @@
 
       <main id="screenPortfolio" class="screen">
         <section class="summary">
-          <div class="kicker">Total general del portafolio</div>
+          <div class="kicker">TOTAL PORTAFOLIO</div>
           <div class="amount" id="portfolioTotal">US$ 0</div>
-          <div class="note" id="portfolioSummary">Agregá activos para calcular el valor actual.</div>
+          <div class="note" id="portfolioSummary"></div>
           <div class="install-tip">Para usarlo como app: abrilo en Safari, tocá Compartir y elegí “Agregar a pantalla de inicio”.</div>
         </section>
 
@@ -642,8 +688,8 @@
 
         <section class="card" id="portfolioList"></section>
 
-        <div class="status">
-          <span class="pill"><span class="dot" id="priceDot"></span><span id="priceStatus">Precios sin actualizar</span></span>
+        <div class="status" id="priceStatusWrap">
+          <span class="pill"><span class="dot" id="priceDot"></span><span id="priceStatus"></span></span>
         </div>
       </main>
     </div>
@@ -829,9 +875,7 @@
     }
 
     byId("totalInvested").textContent = money(total);
-    byId("historySummary").textContent = state.investments.length
-      ? state.investments.length + " registro" + (state.investments.length === 1 ? "" : "s") + " cargado" + (state.investments.length === 1 ? "" : "s") + "."
-      : "";
+    byId("historySummary").textContent = "";
 
     var list = byId("historyList");
     if(!state.investments.length){
@@ -863,8 +907,8 @@
     var list = byId("portfolioList");
     if(!state.portfolio.length){
       byId("portfolioTotal").textContent = money(0, "USD");
-      byId("portfolioSummary").textContent = "Agregá activos para calcular el valor actual.";
-      list.innerHTML = '<div class="empty">Tocá el botón <strong>+</strong> para agregar una acción, ETF o cripto.</div>';
+      byId("portfolioSummary").textContent = "";
+      list.innerHTML = '<div class="empty nowrap">Tocá el botón <strong>+</strong> para agregar una acción, ETF o cripto.</div>';
       return;
     }
 
@@ -908,13 +952,18 @@
     list.innerHTML = html;
 
     byId("portfolioTotal").textContent = money(total, "USD");
-    byId("portfolioSummary").textContent = priced
-      ? priced + " de " + rows.length + " activo" + (rows.length === 1 ? "" : "s") + " con precio actualizado."
-      : "Todavía no se pudieron cargar precios.";
+    byId("portfolioSummary").textContent = "";
   }
 
   function setPriceStatus(kind, msg){
     var dot = byId("priceDot");
+    var wrap = byId("priceStatusWrap");
+    if(!msg){
+      wrap.style.display = "none";
+      byId("priceStatus").textContent = "";
+      return;
+    }
+    wrap.style.display = "flex";
     dot.className = "dot";
     if(kind === "ok") dot.classList.add("ok");
     if(kind === "warn") dot.classList.add("warn");
@@ -1065,7 +1114,7 @@
 
   function refreshPrices(){
     if(!state.portfolio.length){
-      setPriceStatus("warn", "No hay activos para actualizar");
+      setPriceStatus("warn", "");
       return;
     }
 
