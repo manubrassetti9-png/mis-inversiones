@@ -28,7 +28,6 @@
       --ok:#16a34a;
       --warn:#d97706;
       --nav-h:72px;
-      --bottom-band:78px;
       --gap:18px;
       --radius:24px;
       --shadow:0 14px 34px rgba(15,23,42,.14);
@@ -38,19 +37,17 @@
     html{
       height:100%;
       min-height:100%;
-      background:var(--primary);
+      background:var(--soft);
       overflow:hidden;
     }
 
     body{
       margin:0;
-      position:fixed;
-      inset:0;
       width:100%;
       height:100%;
       min-height:100%;
       min-height:100dvh;
-      background:var(--primary);
+      background:var(--soft);
       color:var(--text);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
       overflow:hidden;
@@ -58,50 +55,21 @@
       text-rendering:optimizeLegibility;
     }
 
-    body:before{
-      content:"";
-      position:fixed;
-      left:-24px;
-      right:-24px;
-      top:-24px;
-      bottom:-180px;
-      background:var(--primary);
-      z-index:0;
-      pointer-events:none;
-    }
-
-    body:after{
-      content:"";
-      position:fixed;
-      left:-24px;
-      right:-24px;
-      bottom:-180px;
-      height:240px;
-      background:var(--primary);
-      z-index:1;
-      pointer-events:none;
-    }
-
     button,input{font:inherit}
     button{touch-action:manipulation}
 
     .shell{
-      width:100%;
-      max-width:540px;
-      margin:0 auto;
-      height:100vh;
-      height:100dvh;
-      background:
-        linear-gradient(to bottom,
-          var(--soft) 0,
-          var(--soft) calc(100% - var(--bottom-band)),
-          var(--primary) calc(100% - var(--bottom-band)),
-          var(--primary) 100%);
-      position:relative;
+      width:min(100%,540px);
+      margin:0;
+      position:fixed;
+      inset:0 auto 0 50%;
+      transform:translateX(-50%);
+      height:auto;
+      background:var(--soft);
       overflow-x:hidden;
       overflow-y:auto;
       -webkit-overflow-scrolling:touch;
-      padding-bottom:calc(var(--bottom-band) + 22px);
+      padding-bottom:calc(var(--nav-h) + 34px + env(safe-area-inset-bottom));
       z-index:2;
     }
 
@@ -439,7 +407,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:calc(3px - env(safe-area-inset-bottom));
+      bottom:calc(10px + env(safe-area-inset-bottom));
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -479,7 +447,7 @@
     .fab{
       position:fixed;
       right:18px;
-      bottom:calc(var(--bottom-band) + 18px);
+      bottom:calc(var(--nav-h) + 28px + env(safe-area-inset-bottom));
       width:60px;
       height:60px;
       border:0;
