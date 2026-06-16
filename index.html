@@ -376,12 +376,12 @@
     }
 
     .menu-btn:before{
-      content:"...";
-      display:block;
-      font-size:22px;
-      line-height:1;
-      letter-spacing:.04em;
-      transform:translateY(3px);
+      content:"";
+      width:4px;
+      height:4px;
+      border-radius:50%;
+      background:currentColor;
+      box-shadow:-8px 0 0 currentColor, 8px 0 0 currentColor;
     }
 
     .status{
@@ -1313,6 +1313,30 @@
     });
   }
 
+  function fetchWithTimeout(url, timeoutMs){
+    if(!window.AbortController) return fetch(url);
+
+    var controller = new AbortController();
+    var timer = window.setTimeout(function(){
+      controller.abort();
+    }, timeoutMs || 4000);
+
+    return fetch(url, {signal:controller.signal}).then(function(res){
+      window.clearTimeout(timer);
+      return res;
+    }).catch(function(err){
+      window.clearTimeout(timer);
+      throw err;
+    });
+  }
+
+  function applyPrice(symbol, info, prices){
+    if(!info) return;
+    prices[symbol] = info;
+    lastPrices = prices;
+    renderPortfolio();
+  }
+
   function fetchCryptoPrices(items, prices){
     return new Promise(function(resolve){
       if(!items.length){ resolve(); return; }
@@ -1322,7 +1346,7 @@
       var ids = Object.keys(idsObj).join(",");
       var url = "https://api.coingecko.com/api/v3/simple/price?ids=" + encodeURIComponent(ids) + "&vs_currencies=usd";
 
-      fetch(url).then(function(res){
+      fetchWithTimeout(url, 4500).then(function(res){
         if(!res.ok) throw new Error("coingecko");
         return res.json();
       }).then(function(json){
@@ -1330,7 +1354,7 @@
           var item = items[j];
           var price = json[item.coinId] ? Number(json[item.coinId].usd) : NaN;
           if(Number.isFinite(price) && price > 0){
-            prices[assetKey(item.asset)] = {price:price, currency:"USD", source:"CoinGecko"};
+            applyPrice(assetKey(item.asset), {price:price, currency:"USD", source:"CoinGecko"}, prices);
           }
         }
         resolve();
@@ -1342,21 +1366,46 @@
 
   function fetchStockPrices(assets, prices){
     return new Promise(function(resolve){
-      var index = 0;
+      var seen = {};
+      var symbols = [];
 
-      function next(){
-        if(index >= assets.length){ resolve(); return; }
-        var symbol = assetKey(assets[index++]);
-
-        fetchStockPrice(symbol).then(function(info){
-          if(info) prices[symbol] = info;
-          next();
-        }).catch(function(){
-          next();
-        });
+      for(var i=0;i<assets.length;i++){
+        var symbol = assetKey(assets[i]);
+        if(symbol && !seen[symbol]){
+          seen[symbol] = true;
+          symbols.push(symbol);
+        }
       }
 
-      next();
+      if(!symbols.length){ resolve(); return; }
+
+      Promise.all(symbols.map(function(symbol){
+        return fetchYahoo(symbol).then(function(info){
+          applyPrice(symbol, info, prices);
+        }).catch(function(){});
+      })).then(function(){
+        var missing = symbols.filter(function(symbol){
+          return !prices[symbol] || !Number.isFinite(Number(prices[symbol].price));
+        });
+
+        if(!missing.length) return null;
+        return fetchYahooQuoteBatch(missing, prices);
+      }).then(function(){
+        var missing = symbols.filter(function(symbol){
+          return !prices[symbol] || !Number.isFinite(Number(prices[symbol].price));
+        });
+
+        if(!missing.length) return null;
+        return Promise.all(missing.map(function(symbol){
+          return fetchStockFallbackPrice(symbol).then(function(info){
+            applyPrice(symbol, info, prices);
+          }).catch(function(){});
+        }));
+      }).then(function(){
+        resolve();
+      }).catch(function(){
+        resolve();
+      });
     });
   }
 
@@ -1370,6 +1419,63 @@
       }
       return null;
     });
+  }
+
+  function fetchStockFallbackPrice(symbol){
+    return Promise.all([fetchStooq(symbol), fetchYahooName(symbol)]).then(function(results){
+      var priceInfo = results[0] || {};
+      var name = results[1] || ASSET_NAMES[symbol] || "";
+      if(priceInfo.price || name){
+        priceInfo.name = name || priceInfo.name || "";
+        return priceInfo;
+      }
+      return null;
+    });
+  }
+
+  function fetchYahooQuoteBatch(symbols, prices){
+    var list = symbols.join(",");
+    var direct = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(list);
+    var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
+
+    return tryYahooQuoteBatchUrl(direct, symbols, prices).then(function(){
+      var missing = symbols.filter(function(symbol){ return !prices[symbol]; });
+      if(!missing.length) return null;
+
+      var retryDirect = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(missing.join(","));
+      var retryProxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(retryDirect);
+      return tryYahooQuoteBatchUrl(retryProxy, missing, prices);
+    }).catch(function(){
+      return tryYahooQuoteBatchUrl(proxy, symbols, prices);
+    });
+  }
+
+  function tryYahooQuoteBatchUrl(url, symbols, prices){
+    var allowed = {};
+    for(var i=0;i<symbols.length;i++) allowed[symbols[i]] = true;
+
+    return fetchWithTimeout(url, 3500).then(function(res){
+      if(!res.ok) throw new Error("yahoo-quote-batch");
+      return res.json();
+    }).then(function(json){
+      var results = json.quoteResponse && Array.isArray(json.quoteResponse.result) ? json.quoteResponse.result : [];
+      for(var j=0;j<results.length;j++){
+        var q = results[j];
+        var symbol = assetKey(q.symbol);
+        if(allowed[symbol]){
+          var price = Number(q.regularMarketPrice || q.postMarketPrice || q.preMarketPrice);
+          if(Number.isFinite(price) && price > 0){
+            applyPrice(symbol, {
+              price:price,
+              currency:q.currency || "USD",
+              name:q.longName || q.shortName || ASSET_NAMES[symbol] || "",
+              source:"Yahoo Finance"
+            }, prices);
+          }
+        }
+      }
+      return prices;
+    }).catch(function(){ return prices; });
   }
 
   function fetchYahoo(symbol){
@@ -1390,7 +1496,7 @@
   }
 
   function tryYahooQuoteUrl(url, symbol){
-    return fetch(url).then(function(res){
+    return fetchWithTimeout(url, 3500).then(function(res){
       if(!res.ok) throw new Error("yahoo-quote");
       return res.json();
     }).then(function(json){
@@ -1414,7 +1520,7 @@
   }
 
   function tryYahooUrl(url){
-    return fetch(url).then(function(res){
+    return fetchWithTimeout(url, 3500).then(function(res){
       if(!res.ok) throw new Error("yahoo");
       return res.json();
     }).then(function(json){
@@ -1443,7 +1549,7 @@
   }
 
   function tryStooqUrl(url){
-    return fetch(url).then(function(res){
+    return fetchWithTimeout(url, 3500).then(function(res){
       if(!res.ok) throw new Error("stooq");
       return res.text();
     }).then(function(text){
@@ -1467,7 +1573,7 @@
   }
 
   function tryYahooNameUrl(url, symbol){
-    return fetch(url).then(function(res){
+    return fetchWithTimeout(url, 3500).then(function(res){
       if(!res.ok) throw new Error("yahoo-name");
       return res.json();
     }).then(function(json){
