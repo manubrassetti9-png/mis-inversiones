@@ -36,16 +36,19 @@
     html{
       height:100%;
       min-height:100%;
-      background:var(--soft);
+      background:#f8fafc;
       overflow:hidden;
     }
 
     body{
       margin:0;
+      position:fixed;
+      inset:0;
+      width:100%;
       height:100%;
       min-height:100%;
       min-height:100dvh;
-      background:var(--soft);
+      background:#f8fafc;
       color:var(--text);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
       overflow:hidden;
@@ -53,15 +56,15 @@
       text-rendering:optimizeLegibility;
     }
 
-    body:after{
+    body:before{
       content:"";
       position:fixed;
       left:0;
       right:0;
+      top:0;
       bottom:0;
-      height:calc(120px + env(safe-area-inset-bottom));
       background:var(--soft);
-      z-index:1;
+      z-index:0;
       pointer-events:none;
     }
 
@@ -79,7 +82,7 @@
       overflow-x:hidden;
       overflow-y:auto;
       -webkit-overflow-scrolling:touch;
-      padding-bottom:calc(var(--nav-h) + 28px + env(safe-area-inset-bottom));
+      padding-bottom:calc(var(--nav-h) + 22px);
       z-index:2;
     }
 
@@ -292,6 +295,11 @@
       gap:9px;
     }
 
+    .portfolio-row .row-main{
+      display:grid;
+      gap:2px;
+    }
+
     .money{
       font-weight:900;
       text-align:right;
@@ -328,14 +336,22 @@
       min-width:38px;
       height:38px;
       border-radius:14px;
-      font-size:20px;
+      font-size:0;
       font-weight:900;
-      letter-spacing:.04em;
       line-height:1;
       cursor:pointer;
       display:grid;
       place-items:center;
       padding:0;
+    }
+
+    .menu-btn:before{
+      content:"...";
+      display:block;
+      font-size:22px;
+      line-height:1;
+      letter-spacing:.04em;
+      transform:translateY(-3px);
     }
 
     .status{
@@ -377,7 +393,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:calc(8px + env(safe-area-inset-bottom));
+      bottom:4px;
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -415,14 +431,14 @@
     .fab{
       position:fixed;
       right:18px;
-      bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));
+      bottom:calc(var(--nav-h) + 16px);
       width:60px;
       height:60px;
       border:0;
       border-radius:23px;
       background:var(--primary);
       color:#fff;
-      font-size:35px;
+      font-size:0;
       line-height:1;
       box-shadow:0 16px 34px rgba(37,99,235,.42);
       cursor:pointer;
@@ -430,6 +446,15 @@
       display:grid;
       place-items:center;
       padding:0;
+    }
+
+    .fab:before{
+      content:"+";
+      display:block;
+      font-size:38px;
+      font-weight:500;
+      line-height:1;
+      transform:translateY(-2px);
     }
 
     @media (min-width:560px){
@@ -583,9 +608,22 @@
       text-align:center;
     }
 
+    .toast.success{
+      left:18px;
+      bottom:calc(var(--nav-h) + 24px);
+      transform:translateY(10px);
+      background:#16a34a;
+      border-color:rgba(255,255,255,.18);
+      box-shadow:0 14px 35px rgba(22,163,74,.28);
+    }
+
     .toast.show{
       opacity:1;
       transform:translateX(-50%) translateY(0);
+    }
+
+    .toast.success.show{
+      transform:translateY(0);
     }
 
     .confirm-box{
@@ -682,15 +720,12 @@
         <div class="section-head">
           <h2>Portafolio</h2>
           <div class="mini-actions">
-            <button class="mini-btn primary" type="button" onclick="refreshPrices()">Actualizar</button>
+            <button class="mini-btn primary" type="button" onclick="refreshPrices(true)">Actualizar</button>
           </div>
         </div>
 
         <section class="card" id="portfolioList"></section>
 
-        <div class="status" id="priceStatusWrap">
-          <span class="pill"><span class="dot" id="priceDot"></span><span id="priceStatus"></span></span>
-        </div>
       </main>
     </div>
   </div>
@@ -718,10 +753,10 @@
   <div class="backdrop" id="confirmBackdrop">
     <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <h3 id="confirmTitle">Borrar registro</h3>
-      <p>¿Deseás borrar este registro del historial?</p>
+      <p id="confirmMessage">¿Deseás borrar este registro?</p>
       <div class="confirm-actions">
-        <button class="confirm-no" type="button" onclick="cancelDeleteInvestment()">No</button>
-        <button class="confirm-yes" type="button" onclick="confirmDeleteInvestment()">Sí</button>
+        <button class="confirm-no" type="button" onclick="cancelDeleteItem()">No</button>
+        <button class="confirm-yes" type="button" onclick="confirmDeleteItem()">Sí</button>
       </div>
     </div>
   </div>
@@ -760,11 +795,38 @@
     "SHIB":"shiba-inu"
   };
 
+  var CRYPTO_NAMES = {
+    "BTC":"BITCOIN",
+    "ETH":"ETHEREUM",
+    "SOL":"SOLANA",
+    "BNB":"BINANCE COIN",
+    "XRP":"XRP",
+    "ADA":"CARDANO",
+    "DOGE":"DOGECOIN",
+    "AVAX":"AVALANCHE",
+    "LINK":"CHAINLINK",
+    "DOT":"POLKADOT",
+    "MATIC":"POLYGON",
+    "USDT":"TETHER",
+    "USDC":"USD COIN",
+    "LTC":"LITECOIN",
+    "BCH":"BITCOIN CASH",
+    "TRX":"TRON",
+    "TON":"TONCOIN",
+    "NEAR":"NEAR PROTOCOL",
+    "ATOM":"COSMOS",
+    "UNI":"UNISWAP",
+    "AAVE":"AAVE",
+    "PEPE":"PEPE",
+    "SHIB":"SHIBA INU"
+  };
+
   var state = loadState();
   var settings = {currency:"USD", alphaKey:""};
   var currentScreen = "history";
   var lastPrices = {};
   var pendingDeleteInvestmentId = null;
+  var pendingDeleteAssetId = null;
 
   function byId(id){ return document.getElementById(id); }
 
@@ -850,12 +912,13 @@
       .replace(/'/g,"&#039;");
   }
 
-  function toast(msg){
+  function toast(msg, kind, duration){
     var box = byId("toast");
     box.textContent = msg;
+    box.className = "toast" + (kind ? " " + kind : "");
     box.classList.add("show");
     window.clearTimeout(toast.timer);
-    toast.timer = window.setTimeout(function(){ box.classList.remove("show"); }, 2300);
+    toast.timer = window.setTimeout(function(){ box.classList.remove("show"); }, duration || 2300);
   }
 
   function isStandalone(){
@@ -933,18 +996,19 @@
         priced++;
       }
 
+      var longName = assetLongName(item.asset);
       html += ''
-        + '<div class="row">'
+        + '<div class="row portfolio-row">'
         +   '<div class="row-main">'
         +     '<div class="row-title">' + escapeHTML(item.asset) + '</div>'
-        +     '<div class="row-sub">Cantidad: ' + numberText(qty) + (info ? ' · ' + escapeHTML(info.source) : ' · sin precio') + '</div>'
+        +     (longName ? '<div class="row-sub">' + escapeHTML(longName) + '</div>' : '')
+        +     '<div class="row-sub">Cantidad: ' + numberText(qty) + '</div>'
         +   '</div>'
         +   '<div class="row-right">'
         +     '<div>'
         +       '<div class="money">' + (Number.isFinite(value) ? money(value, info.currency || "USD") : "—") + '</div>'
-        +       '<div class="muted-num">' + (Number.isFinite(price) ? money(price, info.currency || "USD") : "precio no disponible") + '</div>'
         +     '</div>'
-        +     '<button class="trash" type="button" onclick="deleteAsset(\'' + escapeHTML(item.id) + '\')">×</button>'
+        +     '<button class="menu-btn" type="button" aria-label="Opciones del activo" onclick="askDeleteAsset(\'' + escapeHTML(item.id) + '\')">...</button>'
         +   '</div>'
         + '</div>';
     }
@@ -953,22 +1017,6 @@
 
     byId("portfolioTotal").textContent = money(total, "USD");
     byId("portfolioSummary").textContent = "";
-  }
-
-  function setPriceStatus(kind, msg){
-    var dot = byId("priceDot");
-    var wrap = byId("priceStatusWrap");
-    if(!msg){
-      wrap.style.display = "none";
-      byId("priceStatus").textContent = "";
-      return;
-    }
-    wrap.style.display = "flex";
-    dot.className = "dot";
-    if(kind === "ok") dot.classList.add("ok");
-    if(kind === "warn") dot.classList.add("warn");
-    if(kind === "bad") dot.classList.add("bad");
-    byId("priceStatus").textContent = msg;
   }
 
   function switchScreen(screen){
@@ -1072,6 +1120,9 @@
 
   function askDeleteInvestment(id){
     pendingDeleteInvestmentId = id;
+    pendingDeleteAssetId = null;
+    byId("confirmTitle").textContent = "Borrar registro";
+    byId("confirmMessage").textContent = "¿Deseás borrar este registro del historial?";
     byId("confirmBackdrop").classList.add("show");
   }
 
@@ -1082,23 +1133,35 @@
     toast("Registro borrado.");
   }
 
-  function cancelDeleteInvestment(){
+  function askDeleteAsset(id){
+    pendingDeleteAssetId = id;
     pendingDeleteInvestmentId = null;
+    byId("confirmTitle").textContent = "Borrar activo";
+    byId("confirmMessage").textContent = "¿Deseás borrar este activo del portafolio?";
+    byId("confirmBackdrop").classList.add("show");
+  }
+
+  function cancelDeleteItem(){
+    pendingDeleteInvestmentId = null;
+    pendingDeleteAssetId = null;
     byId("confirmBackdrop").classList.remove("show");
   }
 
-  function confirmDeleteInvestment(){
-    var id = pendingDeleteInvestmentId;
+  function confirmDeleteItem(){
+    var investmentId = pendingDeleteInvestmentId;
+    var assetId = pendingDeleteAssetId;
     pendingDeleteInvestmentId = null;
+    pendingDeleteAssetId = null;
     byId("confirmBackdrop").classList.remove("show");
-    if(id) deleteInvestment(id);
+    if(investmentId) deleteInvestment(investmentId);
+    if(assetId) deleteAsset(assetId);
   }
 
   function deleteAsset(id){
     state.portfolio = state.portfolio.filter(function(item){ return item.id !== id; });
     saveState();
     render();
-    refreshPrices();
+    refreshPrices(false);
     toast("Activo borrado.");
   }
 
@@ -1112,13 +1175,18 @@
     return CRYPTOS[key] || null;
   }
 
-  function refreshPrices(){
+  function assetLongName(asset){
+    var key = assetKey(asset).replace("-USD","").replace("/USD","").replace("USD","");
+    if(CRYPTO_NAMES[key]) return CRYPTO_NAMES[key];
+    return "";
+  }
+
+  function refreshPrices(manual){
     if(!state.portfolio.length){
-      setPriceStatus("warn", "");
+      if(manual) toast("Actualizado", "success", 1000);
       return;
     }
 
-    setPriceStatus("warn", "Actualizando precios...");
     var prices = {};
     var cryptoItems = [];
     var stockItems = [];
@@ -1139,19 +1207,11 @@
     ]).then(function(){
       lastPrices = prices;
       renderPortfolio();
-
-      var ok = Object.keys(prices).length;
-      if(ok === state.portfolio.length){
-        setPriceStatus("ok", "Precios actualizados");
-      }else if(ok > 0){
-        setPriceStatus("warn", "Actualizado parcial: " + ok + "/" + state.portfolio.length);
-      }else{
-        setPriceStatus("bad", "No se pudieron actualizar precios");
-      }
+      if(manual) toast("Actualizado", "success", 1000);
     }).catch(function(){
       lastPrices = prices;
       renderPortfolio();
-      setPriceStatus("bad", "No se pudieron actualizar precios");
+      if(manual) toast("Actualizado", "success", 1000);
     });
   }
 
@@ -1236,13 +1296,13 @@
     });
 
     byId("confirmBackdrop").addEventListener("click", function(e){
-      if(e.target === byId("confirmBackdrop")) cancelDeleteInvestment();
+      if(e.target === byId("confirmBackdrop")) cancelDeleteItem();
     });
 
     document.addEventListener("keydown", function(e){
       if(e.key === "Escape"){
         closeAddModal();
-        cancelDeleteInvestment();
+        cancelDeleteItem();
       }
     });
 
@@ -1259,8 +1319,9 @@
   window.closeAddModal = closeAddModal;
   window.saveAddForm = saveAddForm;
   window.askDeleteInvestment = askDeleteInvestment;
-  window.cancelDeleteInvestment = cancelDeleteInvestment;
-  window.confirmDeleteInvestment = confirmDeleteInvestment;
+  window.askDeleteAsset = askDeleteAsset;
+  window.cancelDeleteItem = cancelDeleteItem;
+  window.confirmDeleteItem = confirmDeleteItem;
   window.deleteInvestment = deleteInvestment;
   window.deleteAsset = deleteAsset;
   window.refreshPrices = refreshPrices;
