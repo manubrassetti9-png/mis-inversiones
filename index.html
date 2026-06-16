@@ -33,7 +33,7 @@
     }
 
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html{height:100%;background:var(--bg)}
+    html{height:100%;background:var(--soft)}
     body{
       margin:0;
       min-height:100%;
@@ -57,8 +57,8 @@
       min-height:100dvh;
       background:var(--soft);
       position:relative;
-      overflow:hidden;
-      padding-bottom:calc(var(--nav-h) + 20px + env(safe-area-inset-bottom));
+      overflow-x:hidden;
+      padding-bottom:calc(var(--nav-h) + 24px);
     }
 
     .hero{
@@ -83,27 +83,6 @@
       font-size:24px;
       letter-spacing:-.04em;
       line-height:1.08;
-    }
-
-    .hero p{
-      margin:6px 0 0;
-      color:#cbd5e1;
-      font-size:13px;
-      line-height:1.3;
-    }
-
-    .round-btn{
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.12);
-      color:#fff;
-      width:44px;
-      height:44px;
-      border-radius:16px;
-      display:grid;
-      place-items:center;
-      font-size:20px;
-      cursor:pointer;
-      backdrop-filter:blur(10px);
     }
 
     .content{
@@ -161,6 +140,8 @@
       position:relative;
       z-index:1;
     }
+
+    .note:empty{display:none}
 
     .install-tip{
       display:none;
@@ -308,6 +289,20 @@
       cursor:pointer;
     }
 
+    .menu-btn{
+      border:0;
+      background:#f1f5f9;
+      color:#475569;
+      min-width:38px;
+      height:38px;
+      border-radius:14px;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:.04em;
+      line-height:1;
+      cursor:pointer;
+    }
+
     .status{
       display:flex;
       align-items:center;
@@ -343,7 +338,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:calc(10px + env(safe-area-inset-bottom));
+      bottom:8px;
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -377,7 +372,7 @@
     .fab{
       position:fixed;
       right:18px;
-      bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));
+      bottom:calc(var(--nav-h) + 22px);
       width:60px;
       height:60px;
       border:0;
@@ -524,7 +519,7 @@
     .toast{
       position:fixed;
       left:50%;
-      bottom:calc(var(--nav-h) + 92px + env(safe-area-inset-bottom));
+      bottom:calc(var(--nav-h) + 92px);
       transform:translateX(-50%) translateY(10px);
       background:#0f172a;
       color:#fff;
@@ -547,6 +542,53 @@
       transform:translateX(-50%) translateY(0);
     }
 
+    .confirm-box{
+      width:min(420px,100%);
+      background:#fff;
+      border-radius:24px;
+      padding:20px;
+      box-shadow:0 28px 90px rgba(0,0,0,.34);
+    }
+
+    .confirm-box h3{
+      margin:0;
+      font-size:20px;
+      letter-spacing:-.03em;
+    }
+
+    .confirm-box p{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.4;
+    }
+
+    .confirm-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .confirm-actions button{
+      border:0;
+      border-radius:17px;
+      padding:14px 12px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+    }
+
+    .confirm-no{
+      background:#f1f5f9;
+      color:#0f172a;
+    }
+
+    .confirm-yes{
+      background:#dc2626;
+      color:#fff;
+    }
+
     @media (max-width:370px){
       .amount{font-size:30px}
       .hero h1{font-size:22px}
@@ -563,26 +605,21 @@
       <div class="hero-row">
         <div>
           <h1>Mis inversiones</h1>
-          <p>Historial, acciones y cripto en una vista simple.</p>
         </div>
-        <button class="round-btn" type="button" onclick="openSettings()" aria-label="Configuración">⚙️</button>
       </div>
     </header>
 
     <div class="content">
       <main id="screenHistory" class="screen active">
         <section class="summary">
-          <div class="kicker">Total invertido manualmente</div>
+          <div class="kicker">TOTAL INVERTIDO</div>
           <div class="amount" id="totalInvested">US$ 0</div>
-          <div class="note" id="historySummary">Sin registros todavía.</div>
+          <div class="note" id="historySummary"></div>
           <div class="install-tip">Para usarlo como app: abrilo en Safari, tocá Compartir y elegí “Agregar a pantalla de inicio”.</div>
         </section>
 
         <div class="section-head">
           <h2>Historial de inversiones</h2>
-          <div class="mini-actions">
-            <button class="mini-btn danger" type="button" onclick="clearHistory()">Limpiar</button>
-          </div>
         </div>
 
         <section class="card" id="historyList"></section>
@@ -632,39 +669,14 @@
     </div>
   </div>
 
-  <div class="backdrop" id="settingsBackdrop">
-    <div class="sheet">
-      <div class="sheet-head">
-        <div>
-          <h3>Configuración</h3>
-          <div class="hint">Los datos quedan guardados en este navegador del celular.</div>
-        </div>
-        <button class="close" type="button" onclick="closeSettings()">×</button>
+  <div class="backdrop" id="confirmBackdrop">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">Borrar registro</h3>
+      <p>¿Deseás borrar este registro del historial?</p>
+      <div class="confirm-actions">
+        <button class="confirm-no" type="button" onclick="cancelDeleteInvestment()">No</button>
+        <button class="confirm-yes" type="button" onclick="confirmDeleteInvestment()">Sí</button>
       </div>
-
-      <label for="currencyInput">Moneda visual</label>
-      <select id="currencyInput">
-        <option value="USD">USD</option>
-        <option value="UYU">UYU</option>
-      </select>
-
-      <label for="alphaInput">API key Alpha Vantage opcional</label>
-      <input id="alphaInput" type="password" autocomplete="off" placeholder="Opcional para mejorar acciones/ETF">
-
-      <div class="hint">
-        Cripto: BTC, ETH, SOL, BNB, XRP, ADA, DOGE. Acciones/ETF: VOO, SPY, AAPL, MSFT. 
-        Si una acción no trae precio, agregá una API key.
-      </div>
-
-      <button class="primary-action" type="button" onclick="saveSettings()">Guardar</button>
-
-      <div class="grid2">
-        <button class="secondary-action" type="button" onclick="exportBackup()">Exportar</button>
-        <button class="secondary-action" type="button" onclick="chooseImport()">Importar</button>
-      </div>
-      <input class="hidden-file" id="importFile" type="file" accept="application/json,.json">
-
-      <button class="secondary-action danger-action" type="button" onclick="wipeAll()">Borrar todo</button>
     </div>
   </div>
 
@@ -675,7 +687,6 @@
   "use strict";
 
   var STORAGE_KEY = "mis_inversiones_v2";
-  var SETTINGS_KEY = "mis_inversiones_settings_v2";
 
   var CRYPTOS = {
     "BTC":"bitcoin", "BITCOIN":"bitcoin",
@@ -704,9 +715,10 @@
   };
 
   var state = loadState();
-  var settings = loadSettings();
+  var settings = {currency:"USD", alphaKey:""};
   var currentScreen = "history";
   var lastPrices = {};
+  var pendingDeleteInvestmentId = null;
 
   function byId(id){ return document.getElementById(id); }
 
@@ -726,24 +738,6 @@
 
   function saveState(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  function loadSettings(){
-    try{
-      var raw = localStorage.getItem(SETTINGS_KEY);
-      if(!raw) return {currency:"USD", alphaKey:""};
-      var parsed = JSON.parse(raw);
-      return {
-        currency: parsed.currency || "USD",
-        alphaKey: parsed.alphaKey || ""
-      };
-    }catch(err){
-      return {currency:"USD", alphaKey:""};
-    }
-  }
-
-  function saveSettingsState(){
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 
   function makeId(){
@@ -837,7 +831,7 @@
     byId("totalInvested").textContent = money(total);
     byId("historySummary").textContent = state.investments.length
       ? state.investments.length + " registro" + (state.investments.length === 1 ? "" : "s") + " cargado" + (state.investments.length === 1 ? "" : "s") + "."
-      : "Sin registros todavía.";
+      : "";
 
     var list = byId("historyList");
     if(!state.investments.length){
@@ -845,9 +839,7 @@
       return;
     }
 
-    var rows = state.investments.slice().sort(function(a,b){
-      return String(b.date).localeCompare(String(a.date));
-    });
+    var rows = state.investments.slice().sort(sortInvestments);
 
     var html = '<div class="list">';
     for(var r=0;r<rows.length;r++){
@@ -856,11 +848,10 @@
         + '<div class="row">'
         +   '<div class="row-main">'
         +     '<div class="row-title">' + escapeHTML(dateText(item.date)) + '</div>'
-        +     '<div class="row-sub">Aporte manual</div>'
         +   '</div>'
         +   '<div class="row-right">'
         +     '<div><div class="money">' + money(item.amount) + '</div></div>'
-        +     '<button class="trash" type="button" onclick="deleteInvestment(\'' + escapeHTML(item.id) + '\')">×</button>'
+        +     '<button class="menu-btn" type="button" aria-label="Opciones del registro" onclick="askDeleteInvestment(\'' + escapeHTML(item.id) + '\')">...</button>'
         +   '</div>'
         + '</div>';
     }
@@ -984,7 +975,7 @@
         toast("Revisá la fecha y el importe.");
         return false;
       }
-      state.investments.push({id:makeId(), date:date, amount:amount});
+      state.investments.push({id:makeId(), date:date, amount:amount, createdAt:Date.now()});
       saveState();
       closeAddModal();
       render();
@@ -1021,37 +1012,18 @@
     return false;
   }
 
-  function openSettings(){
-    byId("currencyInput").value = settings.currency || "USD";
-    byId("alphaInput").value = settings.alphaKey || "";
-    byId("settingsBackdrop").classList.add("show");
+  function sortInvestments(a,b){
+    var dateCompare = String(b.date || "").localeCompare(String(a.date || ""));
+    if(dateCompare) return dateCompare;
+
+    var bTime = Number(b.createdAt || String(b.id || "").split("_")[0] || 0);
+    var aTime = Number(a.createdAt || String(a.id || "").split("_")[0] || 0);
+    return bTime - aTime;
   }
 
-  function closeSettings(){
-    byId("settingsBackdrop").classList.remove("show");
-  }
-
-  function saveSettings(){
-    settings.currency = byId("currencyInput").value || "USD";
-    settings.alphaKey = byId("alphaInput").value.trim();
-    saveSettingsState();
-    closeSettings();
-    render();
-    toast("Configuración guardada.");
-    refreshPrices();
-  }
-
-  function clearHistory(){
-    if(!state.investments.length){
-      toast("No hay historial para limpiar.");
-      return;
-    }
-    if(confirm("¿Borrar todo el historial?")){
-      state.investments = [];
-      saveState();
-      render();
-      toast("Historial borrado.");
-    }
+  function askDeleteInvestment(id){
+    pendingDeleteInvestmentId = id;
+    byId("confirmBackdrop").classList.add("show");
   }
 
   function deleteInvestment(id){
@@ -1059,6 +1031,18 @@
     saveState();
     render();
     toast("Registro borrado.");
+  }
+
+  function cancelDeleteInvestment(){
+    pendingDeleteInvestmentId = null;
+    byId("confirmBackdrop").classList.remove("show");
+  }
+
+  function confirmDeleteInvestment(){
+    var id = pendingDeleteInvestmentId;
+    pendingDeleteInvestmentId = null;
+    byId("confirmBackdrop").classList.remove("show");
+    if(id) deleteInvestment(id);
   }
 
   function deleteAsset(id){
@@ -1170,27 +1154,7 @@
   }
 
   function fetchStockPrice(symbol){
-    if(settings.alphaKey){
-      return fetchAlpha(symbol).then(function(info){
-        return info || fetchYahoo(symbol);
-      });
-    }
     return fetchYahoo(symbol);
-  }
-
-  function fetchAlpha(symbol){
-    var url = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + encodeURIComponent(symbol) + "&apikey=" + encodeURIComponent(settings.alphaKey);
-    return fetch(url).then(function(res){
-      if(!res.ok) throw new Error("alpha");
-      return res.json();
-    }).then(function(json){
-      var quote = json["Global Quote"] || {};
-      var price = Number(quote["05. price"]);
-      if(Number.isFinite(price) && price > 0){
-        return {price:price, currency:"USD", source:"Alpha Vantage"};
-      }
-      return null;
-    }).catch(function(){ return null; });
   }
 
   function fetchYahoo(symbol){
@@ -1217,90 +1181,19 @@
     }).catch(function(){ return null; });
   }
 
-  function exportBackup(){
-    var backup = {
-      app:"mis-inversiones",
-      version:2,
-      exportedAt:new Date().toISOString(),
-      state:state,
-      settings:{currency:settings.currency}
-    };
-
-    var blob = new Blob([JSON.stringify(backup,null,2)], {type:"application/json"});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "mis-inversiones-backup-" + todayISO() + ".json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast("Backup exportado.");
-  }
-
-  function chooseImport(){
-    byId("importFile").click();
-  }
-
-  function importBackup(file){
-    if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){
-      try{
-        var parsed = JSON.parse(String(reader.result || ""));
-        var importedState = parsed.state || parsed.data || parsed;
-        if(!Array.isArray(importedState.investments) || !Array.isArray(importedState.portfolio)){
-          throw new Error("Formato inválido");
-        }
-        state = {
-          investments: importedState.investments,
-          portfolio: importedState.portfolio
-        };
-        saveState();
-        closeSettings();
-        render();
-        refreshPrices();
-        toast("Backup importado.");
-      }catch(err){
-        toast("No se pudo importar.");
-      }
-      byId("importFile").value = "";
-    };
-    reader.readAsText(file);
-  }
-
-  function wipeAll(){
-    if(confirm("¿Seguro que querés borrar todo?")){
-      state = {investments:[], portfolio:[]};
-      lastPrices = {};
-      settings.alphaKey = "";
-      saveState();
-      saveSettingsState();
-      setPriceStatus("warn", "Precios sin actualizar");
-      closeSettings();
-      render();
-      toast("Datos borrados.");
-    }
-  }
-
   function setup(){
     byId("addBackdrop").addEventListener("click", function(e){
       if(e.target === byId("addBackdrop")) closeAddModal();
     });
 
-    byId("settingsBackdrop").addEventListener("click", function(e){
-      if(e.target === byId("settingsBackdrop")) closeSettings();
-    });
-
-    byId("importFile").addEventListener("change", function(e){
-      var files = e.target.files;
-      importBackup(files && files[0]);
+    byId("confirmBackdrop").addEventListener("click", function(e){
+      if(e.target === byId("confirmBackdrop")) cancelDeleteInvestment();
     });
 
     document.addEventListener("keydown", function(e){
       if(e.key === "Escape"){
         closeAddModal();
-        closeSettings();
+        cancelDeleteInvestment();
       }
     });
 
@@ -1316,16 +1209,12 @@
   window.openAddModal = openAddModal;
   window.closeAddModal = closeAddModal;
   window.saveAddForm = saveAddForm;
-  window.openSettings = openSettings;
-  window.closeSettings = closeSettings;
-  window.saveSettings = saveSettings;
-  window.clearHistory = clearHistory;
+  window.askDeleteInvestment = askDeleteInvestment;
+  window.cancelDeleteInvestment = cancelDeleteInvestment;
+  window.confirmDeleteInvestment = confirmDeleteInvestment;
   window.deleteInvestment = deleteInvestment;
   window.deleteAsset = deleteAsset;
   window.refreshPrices = refreshPrices;
-  window.exportBackup = exportBackup;
-  window.chooseImport = chooseImport;
-  window.wipeAll = wipeAll;
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", setup);
