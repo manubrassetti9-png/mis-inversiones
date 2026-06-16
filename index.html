@@ -1409,27 +1409,25 @@
     });
   }
 
+  function mergeStockInfo(results, symbol){
+    var priceInfo = results[0] || results[1] || results[2] || {};
+    var name = results[3] || ASSET_NAMES[symbol] || "";
+    if(priceInfo.price || name){
+      priceInfo.name = name || priceInfo.name || "";
+      return priceInfo;
+    }
+    return null;
+  }
+
   function fetchStockPrice(symbol){
     return Promise.all([fetchYahooQuote(symbol), fetchYahoo(symbol), fetchStooq(symbol), fetchYahooName(symbol)]).then(function(results){
-      var priceInfo = results[0] || results[1] || results[2] || {};
-      var name = results[3] || ASSET_NAMES[symbol] || "";
-      if(priceInfo.price || name){
-        priceInfo.name = name || priceInfo.name || "";
-        return priceInfo;
-      }
-      return null;
+      return mergeStockInfo(results, symbol);
     });
   }
 
   function fetchStockFallbackPrice(symbol){
-    return Promise.all([fetchStooq(symbol), fetchYahooName(symbol)]).then(function(results){
-      var priceInfo = results[0] || {};
-      var name = results[1] || ASSET_NAMES[symbol] || "";
-      if(priceInfo.price || name){
-        priceInfo.name = name || priceInfo.name || "";
-        return priceInfo;
-      }
-      return null;
+    return Promise.all([fetchYahooQuote(symbol), fetchYahoo(symbol), fetchStooq(symbol), fetchYahooName(symbol)]).then(function(results){
+      return mergeStockInfo(results, symbol);
     });
   }
 
@@ -1438,23 +1436,23 @@
     var direct = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(list);
     var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
 
-    return tryYahooQuoteBatchUrl(direct, symbols, prices).then(function(){
+    return tryYahooQuoteBatchUrl(direct, symbols, prices, 2500).then(function(){
       var missing = symbols.filter(function(symbol){ return !prices[symbol]; });
       if(!missing.length) return null;
 
       var retryDirect = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(missing.join(","));
       var retryProxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(retryDirect);
-      return tryYahooQuoteBatchUrl(retryProxy, missing, prices);
+      return tryYahooQuoteBatchUrl(retryProxy, missing, prices, 15000);
     }).catch(function(){
-      return tryYahooQuoteBatchUrl(proxy, symbols, prices);
+      return tryYahooQuoteBatchUrl(proxy, symbols, prices, 15000);
     });
   }
 
-  function tryYahooQuoteBatchUrl(url, symbols, prices){
+  function tryYahooQuoteBatchUrl(url, symbols, prices, timeoutMs){
     var allowed = {};
     for(var i=0;i<symbols.length;i++) allowed[symbols[i]] = true;
 
-    return fetchWithTimeout(url, 3500).then(function(res){
+    return fetchWithTimeout(url, timeoutMs || 6000).then(function(res){
       if(!res.ok) throw new Error("yahoo-quote-batch");
       return res.json();
     }).then(function(json){
@@ -1477,26 +1475,25 @@
       return prices;
     }).catch(function(){ return prices; });
   }
-
   function fetchYahoo(symbol){
     var direct = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + "?range=1d&interval=1d";
     var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
 
-    return tryYahooUrl(direct).then(function(info){
-      return info || tryYahooUrl(proxy);
+    return tryYahooUrl(direct, 2500).then(function(info){
+      return info || tryYahooUrl(proxy, 15000);
     });
   }
 
   function fetchYahooQuote(symbol){
     var direct = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbol);
     var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
-    return tryYahooQuoteUrl(direct, symbol).then(function(info){
-      return info || tryYahooQuoteUrl(proxy, symbol);
+    return tryYahooQuoteUrl(direct, symbol, 2500).then(function(info){
+      return info || tryYahooQuoteUrl(proxy, symbol, 15000);
     });
   }
 
-  function tryYahooQuoteUrl(url, symbol){
-    return fetchWithTimeout(url, 3500).then(function(res){
+  function tryYahooQuoteUrl(url, symbol, timeoutMs){
+    return fetchWithTimeout(url, timeoutMs || 6000).then(function(res){
       if(!res.ok) throw new Error("yahoo-quote");
       return res.json();
     }).then(function(json){
@@ -1519,8 +1516,8 @@
     }).catch(function(){ return null; });
   }
 
-  function tryYahooUrl(url){
-    return fetchWithTimeout(url, 3500).then(function(res){
+  function tryYahooUrl(url, timeoutMs){
+    return fetchWithTimeout(url, timeoutMs || 6000).then(function(res){
       if(!res.ok) throw new Error("yahoo");
       return res.json();
     }).then(function(json){
@@ -1543,13 +1540,13 @@
     var stooqSymbol = symbol.indexOf(".") >= 0 ? symbol.toLowerCase() : symbol.toLowerCase() + ".us";
     var direct = "https://stooq.com/q/l/?s=" + encodeURIComponent(stooqSymbol) + "&f=sd2t2ohlcv&h&e=csv";
     var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
-    return tryStooqUrl(direct).then(function(info){
-      return info || tryStooqUrl(proxy);
+    return tryStooqUrl(direct, 2500).then(function(info){
+      return info || tryStooqUrl(proxy, 8000);
     });
   }
 
-  function tryStooqUrl(url){
-    return fetchWithTimeout(url, 3500).then(function(res){
+  function tryStooqUrl(url, timeoutMs){
+    return fetchWithTimeout(url, timeoutMs || 6000).then(function(res){
       if(!res.ok) throw new Error("stooq");
       return res.text();
     }).then(function(text){
@@ -1567,13 +1564,13 @@
   function fetchYahooName(symbol){
     var direct = "https://query1.finance.yahoo.com/v1/finance/search?q=" + encodeURIComponent(symbol) + "&quotesCount=1&newsCount=0";
     var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
-    return tryYahooNameUrl(direct, symbol).then(function(name){
-      return name || tryYahooNameUrl(proxy, symbol);
+    return tryYahooNameUrl(direct, symbol, 2500).then(function(name){
+      return name || tryYahooNameUrl(proxy, symbol, 8000);
     });
   }
 
-  function tryYahooNameUrl(url, symbol){
-    return fetchWithTimeout(url, 3500).then(function(res){
+  function tryYahooNameUrl(url, symbol, timeoutMs){
+    return fetchWithTimeout(url, timeoutMs || 6000).then(function(res){
       if(!res.ok) throw new Error("yahoo-name");
       return res.json();
     }).then(function(json){
