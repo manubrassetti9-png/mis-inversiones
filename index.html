@@ -439,7 +439,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:3px;
+      bottom:calc(3px - env(safe-area-inset-bottom));
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
