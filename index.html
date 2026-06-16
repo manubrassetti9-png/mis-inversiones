@@ -64,7 +64,7 @@
       left:0;
       right:0;
       bottom:0;
-      height:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
+      height:calc(var(--nav-h) + 16px);
       background:var(--primary);
       border-top-left-radius:30px;
       border-top-right-radius:30px;
@@ -421,7 +421,7 @@
     .nav{
       position:fixed;
       left:50%;
-      bottom:calc(8px + env(safe-area-inset-bottom));
+      bottom:8px;
       transform:translateX(-50%);
       width:min(512px,calc(100vw - 20px));
       height:var(--nav-h);
@@ -461,7 +461,7 @@
     .fab{
       position:fixed;
       right:18px;
-      bottom:calc(var(--nav-h) + 28px + env(safe-area-inset-bottom));
+      bottom:calc(var(--nav-h) + 22px);
       width:60px;
       height:60px;
       border:0;
