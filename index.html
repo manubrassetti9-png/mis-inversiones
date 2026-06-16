@@ -68,6 +68,18 @@
       pointer-events:none;
     }
 
+    body:after{
+      content:"";
+      position:fixed;
+      left:-24px;
+      right:-24px;
+      bottom:-180px;
+      height:240px;
+      background:var(--primary);
+      z-index:1;
+      pointer-events:none;
+    }
+
     button,input{font:inherit}
     button{touch-action:manipulation}
 
@@ -191,6 +203,11 @@
       margin:18px 2px 10px;
     }
 
+    .section-head.actions-only{
+      justify-content:flex-end;
+      min-height:42px;
+    }
+
     .section-head h2{
       margin:0;
       font-size:18px;
@@ -200,8 +217,26 @@
     .mini-actions{
       display:flex;
       align-items:center;
-      gap:8px;
+      gap:14px;
     }
+
+    .refresh-badge{
+      display:none;
+      align-items:center;
+      justify-content:center;
+      min-height:34px;
+      border-radius:999px;
+      padding:8px 12px;
+      color:#fff;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+      box-shadow:0 10px 24px rgba(15,23,42,.14);
+    }
+
+    .refresh-badge.show{display:inline-flex}
+    .refresh-badge.pending{background:#d97706}
+    .refresh-badge.success{background:#16a34a}
 
     .mini-btn{
       border:1px solid var(--line);
@@ -232,6 +267,10 @@
       border-radius:22px;
       overflow:hidden;
       box-shadow:0 8px 22px rgba(15,23,42,.06);
+    }
+
+    #historyList{
+      margin-top:16px;
     }
 
     .empty{
@@ -719,10 +758,6 @@
           <div class="install-tip">Para usarlo como app: abrilo en Safari, tocá Compartir y elegí “Agregar a pantalla de inicio”.</div>
         </section>
 
-        <div class="section-head">
-          <h2>Historial de inversiones</h2>
-        </div>
-
         <section class="card" id="historyList"></section>
       </main>
 
@@ -734,9 +769,9 @@
           <div class="install-tip">Para usarlo como app: abrilo en Safari, tocá Compartir y elegí “Agregar a pantalla de inicio”.</div>
         </section>
 
-        <div class="section-head">
-          <h2>Portafolio</h2>
+        <div class="section-head actions-only">
           <div class="mini-actions">
+            <span class="refresh-badge" id="refreshBadge"></span>
             <button class="mini-btn primary" type="button" onclick="refreshPrices(true)">Actualizar</button>
           </div>
         </div>
@@ -972,6 +1007,21 @@
     toast.timer = window.setTimeout(function(){ box.classList.remove("show"); }, duration || 2300);
   }
 
+  function showRefreshBadge(text, kind, duration){
+    var badge = byId("refreshBadge");
+    if(!badge) return;
+    window.clearTimeout(showRefreshBadge.timer);
+    badge.textContent = text || "";
+    badge.className = "refresh-badge" + (kind ? " " + kind : "");
+    if(text) badge.classList.add("show");
+    if(duration){
+      showRefreshBadge.timer = window.setTimeout(function(){
+        badge.className = "refresh-badge";
+        badge.textContent = "";
+      }, duration);
+    }
+  }
+
   function isStandalone(){
     return window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
   }
@@ -1047,7 +1097,7 @@
         priced++;
       }
 
-      var longName = assetLongName(item.asset);
+      var longName = assetLongName(item.asset, info);
       html += ''
         + '<div class="row portfolio-row">'
         +   '<div class="row-main">'
@@ -1226,20 +1276,21 @@
     return CRYPTOS[key] || null;
   }
 
-  function assetLongName(asset){
+  function assetLongName(asset, info){
     var key = assetKey(asset).replace("-USD","").replace("/USD","").replace("USD","");
     if(CRYPTO_NAMES[key]) return CRYPTO_NAMES[key];
     if(ASSET_NAMES[key]) return ASSET_NAMES[key];
+    if(info && info.name) return info.name;
     return "";
   }
 
   function refreshPrices(manual){
     if(!state.portfolio.length){
-      if(manual) toast("Actualizado", "success", 1000);
+      if(manual) showRefreshBadge("Actualizado", "success", 1000);
       return;
     }
 
-    if(manual) toast("Actualizando", "pending", 20000);
+    if(manual) showRefreshBadge("Actualizando", "pending");
 
     var prices = {};
     var cryptoItems = [];
@@ -1261,11 +1312,11 @@
     ]).then(function(){
       lastPrices = prices;
       renderPortfolio();
-      if(manual) toast("Actualizado", "success", 1000);
+      if(manual) showRefreshBadge("Actualizado", "success", 1000);
     }).catch(function(){
       lastPrices = prices;
       renderPortfolio();
-      if(manual) toast("Actualizado", "success", 1000);
+      if(manual) showRefreshBadge("Actualizado", "success", 1000);
     });
   }
 
@@ -1317,7 +1368,15 @@
   }
 
   function fetchStockPrice(symbol){
-    return fetchYahoo(symbol);
+    return Promise.all([fetchYahoo(symbol), fetchStooq(symbol), fetchYahooName(symbol)]).then(function(results){
+      var priceInfo = results[0] || results[1] || {};
+      var name = results[2] || ASSET_NAMES[symbol] || "";
+      if(priceInfo.price || name){
+        priceInfo.name = name || priceInfo.name || "";
+        return priceInfo;
+      }
+      return null;
+    });
   }
 
   function fetchYahoo(symbol){
@@ -1338,10 +1397,64 @@
       var meta = result ? result.meta : null;
       var price = meta ? Number(meta.regularMarketPrice || meta.previousClose) : NaN;
       if(Number.isFinite(price) && price > 0){
-        return {price:price, currency:meta.currency || "USD", source:"Yahoo Finance"};
+        return {
+          price:price,
+          currency:meta.currency || "USD",
+          name:meta.longName || meta.shortName || "",
+          source:"Yahoo Finance"
+        };
       }
       return null;
     }).catch(function(){ return null; });
+  }
+
+  function fetchStooq(symbol){
+    var stooqSymbol = symbol.indexOf(".") >= 0 ? symbol.toLowerCase() : symbol.toLowerCase() + ".us";
+    var direct = "https://stooq.com/q/l/?s=" + encodeURIComponent(stooqSymbol) + "&f=sd2t2ohlcv&h&e=csv";
+    var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
+    return tryStooqUrl(direct).then(function(info){
+      return info || tryStooqUrl(proxy);
+    });
+  }
+
+  function tryStooqUrl(url){
+    return fetch(url).then(function(res){
+      if(!res.ok) throw new Error("stooq");
+      return res.text();
+    }).then(function(text){
+      var lines = String(text || "").trim().split(/\r?\n/);
+      if(lines.length < 2) return null;
+      var cells = lines[1].split(",");
+      var close = Number(cells[6]);
+      if(Number.isFinite(close) && close > 0){
+        return {price:close, currency:"USD", source:"Stooq"};
+      }
+      return null;
+    }).catch(function(){ return null; });
+  }
+
+  function fetchYahooName(symbol){
+    var direct = "https://query1.finance.yahoo.com/v1/finance/search?q=" + encodeURIComponent(symbol) + "&quotesCount=1&newsCount=0";
+    var proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct);
+    return tryYahooNameUrl(direct, symbol).then(function(name){
+      return name || tryYahooNameUrl(proxy, symbol);
+    });
+  }
+
+  function tryYahooNameUrl(url, symbol){
+    return fetch(url).then(function(res){
+      if(!res.ok) throw new Error("yahoo-name");
+      return res.json();
+    }).then(function(json){
+      var quotes = Array.isArray(json.quotes) ? json.quotes : [];
+      for(var i=0;i<quotes.length;i++){
+        var q = quotes[i];
+        if(assetKey(q.symbol) === symbol){
+          return q.longname || q.shortname || "";
+        }
+      }
+      return "";
+    }).catch(function(){ return ""; });
   }
 
   function setup(){
