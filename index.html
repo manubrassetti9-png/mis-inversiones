@@ -27,9 +27,9 @@
       --danger:#dc2626;
       --ok:#16a34a;
       --warn:#d97706;
-      --nav-h:72px;
+      --nav-h:68px;
       --safe-bottom:env(safe-area-inset-bottom, 0px);
-      --nav-bottom:max(0px, calc(8px - var(--safe-bottom)));
+      --nav-bottom:max(0px, calc(2px - var(--safe-bottom)));
       --gap:18px;
       --radius:24px;
       --shadow:0 14px 34px rgba(15,23,42,.14);
@@ -66,7 +66,7 @@
       left:0;
       right:0;
       bottom:0;
-      height:calc(var(--nav-h) + var(--nav-bottom) + 16px);
+      height:calc(var(--nav-h) + var(--nav-bottom) + 8px);
       background:var(--primary);
       border-top-left-radius:30px;
       border-top-right-radius:30px;
@@ -85,7 +85,7 @@
       overflow-x:hidden;
       overflow-y:auto;
       -webkit-overflow-scrolling:touch;
-      padding-bottom:calc(var(--nav-h) + 34px);
+      padding-bottom:calc(var(--nav-h) + 24px);
       z-index:2;
     }
 
